@@ -2,7 +2,7 @@ model_list:
   - model_name: opiscope-local
     litellm_params:
       model: openai/Qwen3.5-4B-Q4_K_M
-      api_base: ${LLAMA_SERVER_URL:-http://192.168.1.10:8089/v1}
+      api_base: http://host.docker.internal:8089/v1
       api_key: sk-placeholder
 
 litellm_settings:
