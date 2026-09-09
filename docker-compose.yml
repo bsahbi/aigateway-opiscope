@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   llama-server:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
@@ -36,6 +38,22 @@ services:
       timeout: 5s
       retries: 3
 
+  litellm-db:
+    image: postgres:16-alpine
+    container_name: litellm-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=litellm
+      - POSTGRES_PASSWORD=litellm
+      - POSTGRES_DB=litellm
+    volumes:
+      - litellm_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   litellm:
     image: ghcr.io/berriai/litellm:latest
     container_name: litellm
@@ -44,8 +62,10 @@ services:
       - "4000:4000"
     volumes:
       - ./litellm/config.yaml:/app/config.yaml
+      - ./litellm/.env:/app/.env
     environment:
       - LITELLM_CONFIG_PATH=/app/config.yaml
+      - DATABASE_URL=postgresql://litellm:litellm@litellm-db:5432/litellm
     command:
       - --config
       - /app/config.yaml
@@ -54,8 +74,13 @@ services:
     depends_on:
       llama-server:
         condition: service_healthy
+      litellm-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  litellm_db_data:
