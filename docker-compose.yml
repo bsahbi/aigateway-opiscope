@@ -29,7 +29,7 @@ services:
       - --model
       - /models/Qwen3.5-4B-Q4_K_M.gguf
       - --n-gpu-layers
-      - "999"
+      - ${N_GPU_LAYERS:-20}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
