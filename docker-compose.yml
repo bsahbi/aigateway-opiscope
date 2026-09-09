@@ -1,6 +1,6 @@
 services:
   llama-server:
-    image: ghcr.io/ggml-org/llama.cpp:server
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
     container_name: llama-server
     restart: unless-stopped
     ports:
@@ -9,6 +9,14 @@ services:
       - ./models:/models
     environment:
       - LD_LIBRARY_PATH=/app
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     command:
       - --host
       - "0.0.0.0"
@@ -20,53 +28,10 @@ services:
       - "8"
       - --model
       - /models/Qwen3.5-4B-Q4_K_M.gguf
+      - --n-gpu-layers
+      - "999"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-
-  marker-service:
-    build:
-      context: ./marker-service
-      dockerfile: Dockerfile
-    container_name: marker-service
-    ports:
-      - "${MARKER_PORT:-8081}:8080"
-    environment:
-      - MARKER_HOST=0.0.0.0
-      - MARKER_PORT=8080
-      - MARKER_API_KEY=${MARKER_API_KEY:-dev-token}
-      - MARKER_LOG_LEVEL=${MARKER_LOG_LEVEL:-info}
-      - MARKER_MODE=${MARKER_MODE:-balanced}
-      - MARKER_MAX_CONCURRENT_JOBS=${MARKER_MAX_CONCURRENT_JOBS:-1}
-      - MARKER_MAX_ATTEMPTS=${MARKER_MAX_ATTEMPTS:-3}
-      - MARKER_STORAGE_PROVIDER=${MARKER_STORAGE_PROVIDER:-mock}
-      - MARKER_S3_ENDPOINT=${MARKER_S3_ENDPOINT:-}
-      - MARKER_S3_BUCKET=${MARKER_S3_BUCKET:-documents}
-      - MARKER_S3_REGION=${MARKER_S3_REGION:-us-east-1}
-      - MARKER_S3_ACCESS_KEY=${MARKER_S3_ACCESS_KEY:-}
-      - MARKER_S3_SECRET_KEY=${MARKER_S3_SECRET_KEY:-}
-      - SURYA_INFERENCE_URL=http://llama-server:8080/v1
-      - SURYA_INFERENCE_BACKEND=llamacpp
-    volumes:
-      - marker-data:/tmp/marker-output
-      - marker-storage:/tmp/marker-mock-storage
-    restart: unless-stopped
-    depends_on:
-      llama-server:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-volumes:
-  marker-data:
-  marker-storage:
