@@ -12,3 +12,5 @@ litellm_settings:
 
 general_settings:
   master_key: sk-opiscope-master
+  ui_username: admin
+  ui_password: admin
